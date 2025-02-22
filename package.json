@@ -1,0 +1,13 @@
+{
+  "name": "vcloud-source-fetcher",
+  "version": "1.0.0",
+  "description": "Fetches webpage source code and extracts vcloud.lol links",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "puppeteer": "^21.8.0"
+  }
+}
