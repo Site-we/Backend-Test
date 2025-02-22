@@ -1,38 +1,9 @@
 from flask import Flask, request, render_template, jsonify
-import httpx  # Faster alternative to requests
-from bs4 import BeautifulSoup  # For parsing HTML
 import re
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
-
-def fetch_page_source(url):
-    try:
-        # Ensure URL starts with http/https
-        if not url.startswith(("http://", "https://")):
-            url = "https://" + url
-
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
-        }
-
-        # Fetch page content
-        response = httpx.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-
-        # Parse HTML with BeautifulSoup
-        soup = BeautifulSoup(response.text, "html.parser")
-        source_code = soup.prettify()
-
-        # Extract first vcloud.lol link
-        match = re.search(r'https?://vcloud\.lol[^\s"<>]+', response.text)
-        vcloud_link = match.group(0) if match else None
-
-        return {"source_code": source_code, "vcloud_link": vcloud_link}
-
-    except Exception as e:
-        return {"error": str(e)}
 
 @app.route('/')
 def index():
@@ -41,14 +12,16 @@ def index():
 @app.route('/fetch_source', methods=['POST'])
 def fetch_source():
     data = request.json
-    url = data.get("url")
+    source_code = data.get("source_code")
 
-    if not url:
-        return jsonify({"error": "No URL provided"}), 400
+    if not source_code:
+        return jsonify({"error": "No source code provided"}), 400
 
-    result = fetch_page_source(url)
+    # Extract first vcloud.lol link
+    match = re.search(r'https?://vcloud\.lol[^\s"<>]+', source_code)
+    vcloud_link = match.group(0) if match else None
 
-    return jsonify(result)
+    return jsonify({"source_code": source_code, "vcloud_link": vcloud_link})
 
 if __name__ == '__main__':
     app.run(debug=True)
