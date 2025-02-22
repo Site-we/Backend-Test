@@ -1,8 +1,6 @@
 from flask import Flask, request, render_template, jsonify
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+import httpx  # Faster alternative to requests
+from bs4 import BeautifulSoup  # For parsing HTML
 import re
 from flask_cors import CORS
 
@@ -10,22 +8,25 @@ app = Flask(__name__)
 CORS(app)
 
 def fetch_page_source(url):
-    chrome_options = Options()
-    chrome_options.binary_location = "/usr/bin/chromium-browser"  # Manually set Chromium path
-    chrome_options.add_argument("--headless")  # Run in headless mode
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-
     try:
-        service = Service(ChromeDriverManager().install())  
-        driver = webdriver.Chrome(service=service, options=chrome_options)
+        # Ensure URL starts with http/https
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
 
-        driver.get(url)
-        source_code = driver.page_source  # Get fully rendered HTML
-        driver.quit()
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+        }
+
+        # Fetch page content
+        response = httpx.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        # Parse HTML with BeautifulSoup
+        soup = BeautifulSoup(response.text, "html.parser")
+        source_code = soup.prettify()
 
         # Extract first vcloud.lol link
-        match = re.search(r'https?://vcloud\.lol[^\s"<>]+', source_code)
+        match = re.search(r'https?://vcloud\.lol[^\s"<>]+', response.text)
         vcloud_link = match.group(0) if match else None
 
         return {"source_code": source_code, "vcloud_link": vcloud_link}
@@ -45,12 +46,9 @@ def fetch_source():
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
-    if not url.startswith(("http://", "https://")):
-        url = "https://" + url  # Ensure correct format
-
     result = fetch_page_source(url)
 
-    return jsonify(result)  # Always return JSON format
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run(debug=True)
