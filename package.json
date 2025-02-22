@@ -1,8 +1,0 @@
-"scripts": {
-  "start": "node server.js",
-  "postinstall": "puppeteer install --unsafe-perm=true --allow-root"
-},
-"puppeteer": {
-  "skip_chromium_download": true,
-  "executablePath": "/usr/bin/chromium-browser"
-}
