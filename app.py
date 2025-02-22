@@ -1,64 +1,29 @@
 from flask import Flask, request, render_template, jsonify
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import ActionChains
-import time
+import httpx  # Faster than requests
 import re
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-def get_final_download_link(url):
+def fetch_page_source(url):
     try:
-        chrome_options = Options()
-        chrome_options.binary_location = "/usr/bin/chromium-browser"  # Set Chromium path
-        chrome_options.add_argument("--headless")  # Run in headless mode
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url  # Ensure valid format
 
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=chrome_options)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+        }
 
-        # Step 1: Load the original page
-        driver.get(url)
-        time.sleep(3)  # Wait for full page load
+        # Fetch page content
+        response = httpx.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
 
-        # Step 2: Extract vcloud.lol link
-        match = re.search(r'https?://vcloud\.lol[^\s"<>]+', driver.page_source)
+        # Extract first vcloud.lol link
+        match = re.search(r'https?://vcloud\.lol[^\s"<>]+', response.text)
         vcloud_link = match.group(0) if match else None
 
-        if not vcloud_link:
-            driver.quit()
-            return {"error": "No vcloud.lol link found"}
-
-        # Step 3: Load the vcloud.lol link
-        driver.get(vcloud_link)
-        time.sleep(3)  # Wait for full page load
-
-        # Step 4: Click "Generate Download Link" button
-        try:
-            button = driver.find_element(By.XPATH, "//button[contains(text(), 'Generate Download Link')]")
-            ActionChains(driver).move_to_element(button).click().perform()
-            time.sleep(3)  # Wait for link to generate
-        except:
-            driver.quit()
-            return {"error": "Generate Download Link button not found"}
-
-        # Step 5: Extract the final download URL
-        match = re.search(r'https?://[^\s"<>]+', driver.page_source)
-        final_download_link = match.group(0) if match else None
-
-        driver.quit()
-
-        if final_download_link:
-            return {"vcloud_link": vcloud_link, "final_download_link": final_download_link}
-        else:
-            return {"error": "No final download link found"}
+        return {"source_code": response.text, "vcloud_link": vcloud_link}
 
     except Exception as e:
         return {"error": str(e)}
@@ -67,15 +32,15 @@ def get_final_download_link(url):
 def index():
     return render_template('index.html')
 
-@app.route('/fetch_download_link', methods=['POST'])
-def fetch_download_link():
+@app.route('/fetch_source', methods=['POST'])
+def fetch_source():
     data = request.json
     url = data.get("url")
 
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
-    result = get_final_download_link(url)
+    result = fetch_page_source(url)
     return jsonify(result)
 
 if __name__ == '__main__':
