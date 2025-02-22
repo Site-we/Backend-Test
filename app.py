@@ -1,22 +1,42 @@
 from flask import Flask, request, render_template, jsonify
-import requests
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 import re
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend communication
+CORS(app)
 
-# Custom headers to mimic a real browser request
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://google.com",  # Some websites check for a valid referer
-    "Connection": "keep-alive"
-}
+def fetch_page_source(url):
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Run in background
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    
+    service = Service(ChromeDriverManager().install())  
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+
+    try:
+        driver.get(url)
+        source_code = driver.page_source  # Get fully rendered HTML
+        driver.quit()
+
+        # Extract first vcloud.lol link
+        match = re.search(r'https?://vcloud\.lol[^\s"<>]+', source_code)
+        vcloud_link = match.group(0) if match else None
+
+        return source_code, vcloud_link
+
+    except Exception as e:
+        driver.quit()
+        return None, str(e)
 
 @app.route('/')
 def index():
-    return render_template('index.html')  # Load the frontend HTML page
+    return render_template('index.html')
 
 @app.route('/fetch_source', methods=['POST'])
 def fetch_source():
@@ -27,23 +47,14 @@ def fetch_source():
         return jsonify({"error": "No URL provided"}), 400
 
     if not url.startswith(("http://", "https://")):
-        url = "https://" + url  # Ensure URL has correct format
+        url = "https://" + url  # Ensure correct format
 
-    try:
-        session = requests.Session()
-        response = session.get(url, headers=HEADERS, timeout=10)
-        response.raise_for_status()  # Handle HTTP errors
+    source_code, vcloud_link = fetch_page_source(url)
 
-        source_code = response.text
+    if source_code is None:
+        return jsonify({"error": f"Failed to fetch page: {vcloud_link}"}), 500
 
-        # Search for the first occurrence of a vcloud.lol link
-        match = re.search(r'https?://vcloud\.lol[^\s"<>]+', source_code)
-        vcloud_link = match.group(0) if match else None
-
-        return jsonify({"source_code": source_code, "vcloud_link": vcloud_link})
-
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Failed to fetch page: {str(e)}"}), 500
+    return jsonify({"source_code": source_code, "vcloud_link": vcloud_link})
 
 if __name__ == '__main__':
     app.run(debug=True)
