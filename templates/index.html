@@ -64,34 +64,27 @@
         }
 
         function fetchSourceCode() {
-            let iframe = document.getElementById("webView");
-            let sourceCodeContainer = document.getElementById("sourceCode");
-
-            try {
-                let doc = iframe.contentDocument || iframe.contentWindow.document;
-                let sourceCode = doc.documentElement.outerHTML;
-
-                // Send extracted source code to backend
-                fetch('/fetch_source', {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ source_code: sourceCode })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        sourceCodeContainer.textContent = "Error: " + data.error;
-                    } else {
-                        sourceCodeContainer.textContent = data.source_code;
-                    }
-                })
-                .catch(error => {
-                    sourceCodeContainer.textContent = "Request failed: " + error;
-                });
-
-            } catch (error) {
-                sourceCodeContainer.textContent = "Error: Cannot access iframe content due to cross-origin restrictions.";
+            let url = document.getElementById("urlInput").value.trim();
+            if (!url.startsWith("http")) {
+                url = "https://" + url;
             }
+
+            fetch('/fetch_source', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: url })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById("sourceCode").textContent = "Error: " + data.error;
+                } else {
+                    document.getElementById("sourceCode").textContent = data.source_code;
+                }
+            })
+            .catch(error => {
+                document.getElementById("sourceCode").textContent = "Request failed: " + error;
+            });
         }
     </script>
 </body>
