@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fetch Page Source Code</title>
+    <title>Fetch Download Link</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -27,7 +27,7 @@
         }
         iframe {
             width: 100%;
-            height: 400px;
+            height: 500px;
             border: 1px solid #ddd;
             margin-top: 10px;
         }
@@ -45,11 +45,11 @@
 </head>
 <body>
     <div class="container">
-        <h2>Fetch Page Source Code</h2>
-        <input type="text" id="urlInput" placeholder="Enter URL (e.g., example.com)">
+        <h2>Fetch Download Link</h2>
+        <input type="text" id="urlInput" placeholder="Enter URL">
         <button onclick="loadWebView()">Load Page</button>
-        <button onclick="fetchSourceCode()">Get Source Code</button>
-        
+        <button onclick="injectAutoClick()">Auto Click Button</button>
+
         <iframe id="webView"></iframe>
         <pre id="sourceCode"></pre>
     </div>
@@ -63,33 +63,23 @@
             document.getElementById("webView").src = url;
         }
 
-        function fetchSourceCode() {
-            let url = document.getElementById("urlInput").value.trim();
-            if (!url.startsWith("http")) {
-                url = "https://" + url;
-            }
+        function injectAutoClick() {
+            let iframe = document.getElementById("webView");
+            try {
+                let doc = iframe.contentDocument || iframe.contentWindow.document;
 
-            fetch('/fetch_source', {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url: url })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    document.getElementById("sourceCode").textContent = "Error: " + data.error;
-                } else {
-                    document.getElementById("sourceCode").textContent = data.source_code;
-
-                    // ✅ If vcloud.lol link is found, set it in the search box
-                    if (data.vcloud_link) {
-                        document.getElementById("urlInput").value = data.vcloud_link;
+                // Find and click a button with text "Generate Download Link"
+                let buttons = doc.getElementsByTagName("button");
+                for (let btn of buttons) {
+                    if (btn.innerText.includes("Generate Download Link") || btn.innerText.includes("Download")) {
+                        btn.click();
+                        console.log("Clicked: " + btn.innerText);
+                        break;
                     }
                 }
-            })
-            .catch(error => {
-                document.getElementById("sourceCode").textContent = "Request failed: " + error;
-            });
+            } catch (error) {
+                document.getElementById("sourceCode").textContent = "Error: Cannot interact with iframe due to security restrictions.";
+            }
         }
     </script>
 </body>
