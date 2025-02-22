@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, jsonify
 import requests
+import re
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -17,14 +18,21 @@ def fetch_source():
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
-    # Ensure the URL has HTTP/HTTPS prefix
     if not url.startswith(("http://", "https://")):
-        url = "https://" + url
+        url = "https://" + url  # Ensure URL has correct format
 
     try:
         response = requests.get(url, timeout=10)
-        response.raise_for_status()  # Raise error for bad responses (4xx, 5xx)
-        return jsonify({"source_code": response.text})
+        response.raise_for_status()  # Handle HTTP errors
+
+        source_code = response.text
+
+        # Search for the first occurrence of a vcloud.lol link
+        match = re.search(r'https?://vcloud\.lol[^\s"<>]+', source_code)
+        vcloud_link = match.group(0) if match else None
+
+        return jsonify({"source_code": source_code, "vcloud_link": vcloud_link})
+
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 500
 
