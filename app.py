@@ -11,8 +11,8 @@ CORS(app)
 
 def fetch_page_source(url):
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run Chrome in the background
-    chrome_options.add_argument("--disable-gpu")
+    chrome_options.binary_location = "/usr/bin/chromium-browser"  # Manually set Chromium path
+    chrome_options.add_argument("--headless")  # Run in headless mode
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
