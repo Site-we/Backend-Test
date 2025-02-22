@@ -64,6 +64,11 @@
                     document.getElementById("sourceCode").textContent = "Error: " + data.error;
                 } else {
                     document.getElementById("sourceCode").textContent = data.source_code;
+
+                    // If vcloud.lol link is found, update the search box
+                    if (data.vcloud_link) {
+                        document.getElementById("urlInput").value = data.vcloud_link;
+                    }
                 }
             })
             .catch(error => {
