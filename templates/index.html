@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetch Page Source Code</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+        input {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        pre {
+            text-align: left;
+            background: #f4f4f4;
+            padding: 10px;
+            border: 1px solid #ddd;
+            max-height: 300px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Fetch Page Source Code</h2>
+        <input type="text" id="urlInput" placeholder="Enter URL (e.g., example.com)">
+        <button onclick="fetchSourceCode()">Get Source Code</button>
+        <pre id="sourceCode"></pre>
+    </div>
+
+    <script>
+        function fetchSourceCode() {
+            let url = document.getElementById("urlInput").value.trim();
+            if (!url) {
+                alert("Please enter a URL");
+                return;
+            }
+
+            fetch('/fetch_source', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: url })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById("sourceCode").textContent = "Error: " + data.error;
+                } else {
+                    document.getElementById("sourceCode").textContent = data.source_code;
+                }
+            })
+            .catch(error => {
+                document.getElementById("sourceCode").textContent = "Request failed: " + error;
+            });
+        }
+    </script>
+</body>
+</html>
