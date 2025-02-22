@@ -11,15 +11,15 @@ CORS(app)
 
 def fetch_page_source(url):
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run in background
+    chrome_options.add_argument("--headless")  # Run Chrome in the background
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    
-    service = Service(ChromeDriverManager().install())  
-    driver = webdriver.Chrome(service=service, options=chrome_options)
 
     try:
+        service = Service(ChromeDriverManager().install())  
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+
         driver.get(url)
         source_code = driver.page_source  # Get fully rendered HTML
         driver.quit()
@@ -28,11 +28,10 @@ def fetch_page_source(url):
         match = re.search(r'https?://vcloud\.lol[^\s"<>]+', source_code)
         vcloud_link = match.group(0) if match else None
 
-        return source_code, vcloud_link
+        return {"source_code": source_code, "vcloud_link": vcloud_link}
 
     except Exception as e:
-        driver.quit()
-        return None, str(e)
+        return {"error": str(e)}
 
 @app.route('/')
 def index():
@@ -49,12 +48,9 @@ def fetch_source():
     if not url.startswith(("http://", "https://")):
         url = "https://" + url  # Ensure correct format
 
-    source_code, vcloud_link = fetch_page_source(url)
+    result = fetch_page_source(url)
 
-    if source_code is None:
-        return jsonify({"error": f"Failed to fetch page: {vcloud_link}"}), 500
-
-    return jsonify({"source_code": source_code, "vcloud_link": vcloud_link})
+    return jsonify(result)  # Always return JSON format
 
 if __name__ == '__main__':
     app.run(debug=True)
